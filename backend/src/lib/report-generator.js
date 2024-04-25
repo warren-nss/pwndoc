@@ -309,6 +309,12 @@ function cvssStrToObject(cvss) {
 }
 
 async function prepAuditData(data, settings) {
+    const severityCounters = {
+        Critical: 0,
+        High: 0,
+        Medium: 0,
+        Low: 0
+    };
     /** CVSS Colors for table cells */
     var noneColor = settings.report.public.cvssColors.noneColor.replace('#', ''); //default of blue ("#4A86E8")
     var lowColor = settings.report.public.cvssColors.lowColor.replace('#', ''); //default of green ("#008000")
@@ -372,12 +378,39 @@ async function prepAuditData(data, settings) {
     result.language = data.language || "undefined"
     result.scope = data.scope.toObject() || []
 
+    const severityCounterstotal = {
+        Critical: 0,
+        High: 0,
+        Medium: 0,
+        Low: 0
+    };
+
+    data.findings.forEach(finding => {
+        var tmpCVSS = CVSS31.calculateCVSSFromVector(finding.cvssv3);
+        severityCounterstotal[tmpCVSS.baseSeverity]++;
+    });
+
+    const severityProcessed = {
+        Critical: 0,
+        High: 0,
+        Medium: 0,
+        Low: 0
+    };
+
+
     result.findings = []
     for (var finding of data.findings) {
         var tmpCVSS = CVSS31.calculateCVSSFromVector(finding.cvssv3);
+        severityCounters[tmpCVSS.baseSeverity]++;
+        severityProcessed[tmpCVSS.baseSeverity]++;
+        var currentCount = severityProcessed[tmpCVSS.baseSeverity];
+        var isLastInSeverity = currentCount === severityCounterstotal[tmpCVSS.baseSeverity];
+
         var tmpFinding = {
             title: finding.title || "",
             vulnType: $t(finding.vulnType) || "",
+            currentCount: severityCounters[tmpCVSS.baseSeverity],
+            lastInSeverity: isLastInSeverity,
             description: await splitHTMLParagraphs(finding.description),
             observation: await splitHTMLParagraphs(finding.observation),
             remediation: await splitHTMLParagraphs(finding.remediation),
@@ -439,7 +472,7 @@ async function prepAuditData(data, settings) {
         else tmpFinding.cvss.environmentalCellColor = cellNoneColor
 
         tmpFinding.cvssObj = cvssStrToObject(tmpCVSS.vectorString)
-
+        console.log()
         if (finding.customFields) {
             for (field of finding.customFields) {
                 // For retrocompatibility of findings with old customFields

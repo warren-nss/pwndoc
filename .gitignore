@@ -26,3 +26,6 @@ app-settings.json
 
 # Version managers
 .tool-versions
+backend/src/config/config.json
+Vuln templates/Internal.yml
+Vuln templates/web.yml
